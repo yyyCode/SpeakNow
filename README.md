@@ -120,19 +120,110 @@ go run ./cmd/server -config configs/config.yaml
 
 ## 关闭 / 重启服务
 
-### 查找占用 8080 的进程
+### Windows
+
+查找占用 8080 的进程：
 
 ```powershell
 netstat -ano | findstr :8080
 ```
 
-### 结束进程
+结束进程：
 
 ```powershell
 taskkill /PID <PID> /F
 # 或
 taskkill /IM speaknow.exe /F
 ```
+
+### Linux（systemd）
+
+```bash
+sudo systemctl stop speaknow
+sudo systemctl restart speaknow
+sudo systemctl status speaknow
+journalctl -u speaknow -f
+```
+
+查找占用 8080 的进程：
+
+```bash
+ss -tlnp | grep :8080
+# 或
+sudo lsof -i :8080
+```
+
+---
+
+## Linux 部署（systemd）
+
+适用于在 Linux 服务器上以系统服务方式常驻运行（开机自启、崩溃自动重启）。
+
+### 方式 A：一键安装（推荐）
+
+在仓库根目录执行（需要 root、已安装 Go 1.23+）：
+
+```bash
+cp configs/config.example.yaml configs/config.yaml
+# 编辑 configs/config.yaml 填入密钥（可选，也可装完再改 /etc/speaknow/config.yaml）
+
+sudo bash deployments/install-linux.sh
+sudo systemctl start speaknow
+```
+
+默认安装路径：
+
+| 路径 | 说明 |
+|------|------|
+| `/opt/speaknow/bin/speaknow` | 可执行文件 |
+| `/opt/speaknow/web/` | 前端静态资源 |
+| `/etc/speaknow/config.yaml` | 配置文件 |
+| `speaknow.service` | systemd 单元（`/etc/systemd/system/`） |
+
+服务以系统用户 `speaknow` 运行。若已本地编译好二进制，可跳过构建：
+
+```bash
+go build -o bin/speaknow ./cmd/server
+sudo bash deployments/install-linux.sh --no-build
+```
+
+自定义安装目录：
+
+```bash
+sudo INSTALL_PREFIX=/usr/local/speaknow CONFIG_DIR=/etc/speaknow \
+  bash deployments/install-linux.sh
+```
+
+### 方式 B：手动安装
+
+```bash
+# 编译
+CGO_ENABLED=0 go build -o speaknow ./cmd/server
+
+# 目录布局
+sudo useradd --system --home-dir /opt/speaknow --shell /usr/sbin/nologin speaknow
+sudo mkdir -p /opt/speaknow/bin /opt/speaknow/web /etc/speaknow
+sudo install -m 0755 speaknow /opt/speaknow/bin/speaknow
+sudo cp -r web /opt/speaknow/
+sudo cp configs/config.yaml /etc/speaknow/config.yaml   # 或从 config.example.yaml 复制
+
+# 安装并启动 systemd
+sudo cp deployments/speaknow.service /etc/systemd/system/
+sudo chown -R speaknow:speaknow /opt/speaknow
+sudo systemctl daemon-reload
+sudo systemctl enable --now speaknow
+```
+
+### 在 Windows 上交叉编译 Linux 二进制
+
+```powershell
+$env:GOOS="linux"; $env:GOARCH="amd64"; $env:CGO_ENABLED="0"
+go build -o bin/speaknow ./cmd/server
+```
+
+将 `bin/speaknow`、`web/`、`configs/config.yaml` 上传到 Linux 后，在服务器上执行 `sudo bash deployments/install-linux.sh --no-build`。
+
+环境变量（前缀 `SPEAKNOW_`）可在 `deployments/speaknow.service` 的 `[Service]` 段中取消注释 `Environment=` 使用。
 
 ---
 
@@ -174,13 +265,15 @@ curl -X POST http://localhost:8080/api/v1/asr/recognize \
 
 ## Docker 部署
 
+适合不想在宿主机安装 Go / systemd 的场景，与上文 Linux systemd 二选一即可。
+
 ```bash
 # 可选：启动 Redis
 docker run -d --name speaknow-redis -p 6379:6379 redis:7-alpine
 
 # 使用 docker-compose
 cd deployments
-docker compose up --build
+docker compose up -d --build
 ```
 
 ---
@@ -202,7 +295,7 @@ SpeakNow/
 ├── configs/
 │   ├── config.example.yaml  # 配置模板（可提交 Git）
 │   └── config.yaml          # 本地配置（含密钥，已 gitignore）
-├── deployments/             # Dockerfile、docker-compose
+├── deployments/             # Dockerfile、docker-compose、systemd、install-linux.sh
 └── iat_ws_go_demo/          # 讯飞官方 WebSocket Demo 参考
 ```
 
