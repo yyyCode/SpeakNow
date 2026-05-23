@@ -19,9 +19,14 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Host string `mapstructure:"host"`
-	Port int    `mapstructure:"port"`
-	Mode string `mapstructure:"mode"`
+	Host              string        `mapstructure:"host"`
+	Port              int           `mapstructure:"port"`
+	Mode              string        `mapstructure:"mode"`
+	ReadHeaderTimeout time.Duration `mapstructure:"read_header_timeout"`
+	ReadTimeout       time.Duration `mapstructure:"read_timeout"`
+	WriteTimeout      time.Duration `mapstructure:"write_timeout"`
+	IdleTimeout       time.Duration `mapstructure:"idle_timeout"`
+	ShutdownTimeout   time.Duration `mapstructure:"shutdown_timeout"`
 }
 
 type RedisConfig struct {
@@ -112,5 +117,19 @@ func Load(path string) (*Config, error) {
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("unmarshal config: %w", err)
 	}
+	cfg.applyDefaults()
 	return &cfg, nil
+}
+
+func (c *Config) applyDefaults() {
+	if c.Server.ReadHeaderTimeout <= 0 {
+		c.Server.ReadHeaderTimeout = 10 * time.Second
+	}
+	// ReadTimeout / WriteTimeout 为 0 表示不限制，便于 WebSocket 长连接。
+	if c.Server.IdleTimeout <= 0 {
+		c.Server.IdleTimeout = 120 * time.Second
+	}
+	if c.Server.ShutdownTimeout <= 0 {
+		c.Server.ShutdownTimeout = 30 * time.Second
+	}
 }
