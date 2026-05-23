@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SpeakNow 语音输入法</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>" />
+  <style>
+  :root {
+    --purple: #7c4dff;
+    --purple-dark: #651fff;
+    --purple-light: #b388ff;
+    --bg-start: #f3eeff;
+    --bg-end: #faf8ff;
+    --card: #ffffff;
+    --text: #333333;
+    --text-muted: #888888;
+    --border: #e8e0f5;
+    --input-bg: #f5f5f7;
+    --green: #4caf50;
+    --red: #ef5350;
+    --orange: #ff9800;
+    --shadow: 0 4px 24px rgba(124, 77, 255, 0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 50%, #ede7f6 100%);
+    min-height: 100vh;
+    color: var(--text);
+    padding: 40px 20px 60px;
+  }
+
+  .page {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .header-icon {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+    filter: drop-shadow(0 2px 8px rgba(124, 77, 255, 0.3));
+  }
+  .header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--purple) 0%, var(--purple-light) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+  .header p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+  }
+
+  /* Main Card */
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .card-rainbow {
+    height: 4px;
+    background: linear-gradient(90deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, var(--purple));
+  }
+  .card-body { padding: 24px 28px 20px; }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .lang-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .lang-group label {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .lang-group select {
+    padding: 8px 32px 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: var(--text);
+    background: var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 10px center;
+    appearance: none;
+    cursor: pointer;
+    min-width: 160px;
+  }
+  .lang-group select:focus {
+    outline: none;
+    border-color: var(--purple);
+  }
+
+  /* Toggle */
+  .toggle-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+  }
+  .toggle {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: #ccc;
+    border-radius: 24px;
+    cursor: pointer;
+    transition: background 0.25s;
+  }
+  .toggle-slider::before {
+    content: "";
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    bottom: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.25s;
+    box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  }
+  .toggle input:checked + .toggle-slider { background: var(--green); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+  /* Text area */
+  .result-box {
+    position: relative;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    min-height: 200px;
+    margin-bottom: 20px;
+    transition: border-color 0.2s;
+  }
+  .result-box:focus-within { border-color: var(--purple-light); }
+  .result-box textarea {
+    width: 100%;
+    min-height: 200px;
+    padding: 20px;
+    border: none;
+    background: transparent;
+    font-size: 1rem;
+    line-height: 1.8;
+    color: var(--text);
+    resize: vertical;
+    font-family: inherit;
+  }
+  .result-box textarea:focus { outline: none; }
+  .result-box textarea::placeholder { color: #bbb; }
+  .placeholder-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #bbb;
+    font-size: 0.95rem;
+    pointer-events: none;
+    text-align: center;
+    line-height: 1.8;
+    transition: opacity 0.2s;
+  }
+  .placeholder-hint.hidden { opacity: 0; }
+  .placeholder-hint kbd {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,.06);
+    margin: 0 2px;
+  }
+
+  /* Footer bar */
+  .footer-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .status-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+  }
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .status-dot.recording {
+    background: var(--red);
+    animation: blink 1s infinite;
+  }
+  .status-dot.processing { background: var(--orange); }
+  .status-dot.error { background: var(--red); }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .btn-record {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    background: linear-gradient(135deg, var(--purple) 0%, var(--purple-dark) 100%);
+    color: #fff;
+    border: none;
+    border-radius: 24px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(124, 77, 255, 0.35);
+    transition: transform 0.15s, box-shadow 0.15s;
+    white-space: nowrap;
+  }
+  .btn-record:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(124, 77, 255, 0.45);
+  }
+  .btn-record:active { transform: translateY(0); }
+  .btn-record.recording {
+    background: linear-gradient(135deg, #ef5350 0%, #e53935 100%);
+    box-shadow: 0 4px 16px rgba(239, 83, 80, 0.35);
+  }
+  .btn-record:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .btn-record svg { width: 18px; height: 18px; fill: currentColor; }
+
+  .meta-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  .meta-bar span {
+    background: var(--input-bg);
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+
+  /* History Card */
+  .card-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .btn-clear {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  .btn-clear:hover { color: var(--red); background: #fff5f5; }
+
+  .history-list { list-style: none; }
+  .history-item {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .history-item:last-child { border-bottom: none; }
+  .history-item:hover { background: var(--input-bg); margin: 0 -12px; padding: 12px; border-radius: 8px; }
+  .history-text {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .history-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+  .history-empty {
+    text-align: center;
+    color: #ccc;
+    font-size: 0.875rem;
+    padding: 24px 0;
+  }
+
+  .upload-link {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+  .upload-link button {
+    background: none;
+    border: none;
+    color: var(--purple);
+    cursor: pointer;
+    text-decoration: underline;
+    font-size: inherit;
+  }
+  input[type="file"] { display: none; }
+
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: rgba(51, 51, 51, 0.9);
+    color: #fff;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+    z-index: 100;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  @media (max-width: 520px) {
+    .toolbar { flex-direction: column; align-items: flex-start; }
+    .footer-bar { flex-direction: column-reverse; align-items: stretch; }
+    .btn-record { justify-content: center; }
+    .header h1 { font-size: 1.6rem; }
+  }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <div class="header-icon">🎤</div>
+      <h1>SpeakNow 语音输入法</h1>
+      <p>免费在线语音转文字 — 按住录音，实时出字</p>
+    </header>
+
+    <div class="card">
+      <div class="card-rainbow"></div>
+      <div class="card-body">
+        <div class="toolbar">
+          <div class="lang-group">
+            <label for="language">识别语言</label>
+            <select id="language">
+              <option value="zh-CN">中文（普通话）</option>
+              <option value="zh-TW">中文（繁体）</option>
+              <option value="en-US">English (US)</option>
+              <option value="ja-JP">日本語</option>
+              <option value="ko-KR">한국어</option>
+            </select>
+          </div>
+          <div class="toggle-group">
+            <label class="toggle">
+              <input type="checkbox" id="autoCopy" checked />
+              <span class="toggle-slider"></span>
+            </label>
+            <span>录音结束自动复制</span>
+          </div>
+        </div>
+
+        <div class="result-box">
+          <div class="placeholder-hint" id="placeholder">
+            按 <kbd>Ctrl</kbd> + <kbd>Space</kbd> 开始实时语音识别
+          </div>
+          <textarea id="output" aria-label="识别结果"></textarea>
+        </div>
+
+        <div class="footer-bar">
+          <div class="status-group">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">等待开始</span>
+          </div>
+          <button id="recordBtn" class="btn-record">
+            <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/></svg>
+            <span id="recordBtnText">开始录音</span>
+          </button>
+        </div>
+
+        <div class="meta-bar" id="metaBar" style="display:none">
+          <span id="metaProvider">厂商: -</span>
+          <span id="metaLatency">延迟: -</span>
+          <span id="metaDuration">时长: -</span>
+          <span id="metaCache">缓存: -</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-rainbow"></div>
+      <div class="card-body">
+        <div class="card-title">
+          <span>历史记录</span>
+          <button class="btn-clear" id="clearHistory">清空</button>
+        </div>
+        <ul class="history-list" id="historyList">
+          <li class="history-empty">暂无记录</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="upload-link">
+      也可以 <button id="uploadBtn">上传 WAV/PCM 文件</button> 进行离线识别
+      <input type="file" id="fileInput" accept="audio/*" />
+    </p>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+  const API_BASE = window.location.origin;
+
+  const recordBtn = document.getElementById('recordBtn');
+  const recordBtnText = document.getElementById('recordBtnText');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const fileInput = document.getElementById('fileInput');
+  const output = document.getElementById('output');
+  const placeholder = document.getElementById('placeholder');
+  const statusDot = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
+  const language = document.getElementById('language');
+  const autoCopy = document.getElementById('autoCopy');
+  const metaBar = document.getElementById('metaBar');
+  const historyList = document.getElementById('historyList');
+  const clearHistory = document.getElementById('clearHistory');
+  const toast = document.getElementById('toast');
+
+  let audioStream = null;
+  let audioContext = null;
+  let processor = null;
+  let sourceNode = null;
+  let ws = null;
+  let recording = false;
+  let processing = false;
+  let streamStartTime = 0;
+
+  const HISTORY_KEY = 'speaknow_history';
+  const AUTO_COPY_KEY = 'speaknow_auto_copy';
+
+  // 恢复设置
+  if (localStorage.getItem(AUTO_COPY_KEY) !== null) {
+    autoCopy.checked = localStorage.getItem(AUTO_COPY_KEY) === 'true';
+  }
+  autoCopy.addEventListener('change', () => {
+    localStorage.setItem(AUTO_COPY_KEY, autoCopy.checked);
+  });
+
+  output.addEventListener('input', updatePlaceholder);
+  updatePlaceholder();
+  renderHistory();
+
+  // Ctrl + Space 快捷键
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.code === 'Space') {
+      e.preventDefault();
+      toggleRecording();
+    }
+  });
+
+  recordBtn.addEventListener('click', toggleRecording);
+  uploadBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (file) await recognize(file, file.name);
+    fileInput.value = '';
+  });
+  clearHistory.addEventListener('click', () => {
+    localStorage.removeItem(HISTORY_KEY);
+    renderHistory();
+    showToast('历史记录已清空');
+  });
+
+  async function toggleRecording() {
+    if (processing) return;
+    if (recording) {
+      stopRecording();
+    } else {
+      await startRecording();
+    }
+  }
+
+  async function startRecording() {
+    try {
+      streamStartTime = Date.now();
+      output.value = '';
+      updatePlaceholder();
+      metaBar.style.display = 'none';
+
+      const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const params = new URLSearchParams({
+        language: language.value,
+        enable_punc: 'true',
+        provider: 'auto',
+      });
+      ws = new WebSocket(`${wsProto}//${location.host}/api/v1/asr/stream?${params}`);
+      ws.binaryType = 'arraybuffer';
+
+      await new Promise((resolve, reject) => {
+        ws.onopen = resolve;
+        ws.onerror = () => reject(new Error('WebSocket 连接失败'));
+        ws.onclose = (e) => {
+          if (!recording && !processing) return;
+          if (e.code !== 1000 && e.code !== 1005) {
+            reject(new Error('连接已断开'));
+          }
+        };
+      });
+
+      ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        handleStreamEvent(data);
+      };
+
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      audioStream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+      });
+      sourceNode = audioContext.createMediaStreamSource(audioStream);
+      processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+      processor.onaudioprocess = (ev) => {
+        if (!recording || !ws || ws.readyState !== WebSocket.OPEN) return;
+        const pcm = downsampleTo16k(ev.inputBuffer.getChannelData(0), audioContext.sampleRate);
+        ws.send(pcm);
+      };
+
+      sourceNode.connect(processor);
+      processor.connect(audioContext.destination);
+
+      recording = true;
+      setUIState('recording');
+    } catch (e) {
+      cleanupAudio();
+      closeWS();
+      setUIState('error', e.message || '无法开始录音');
+      showToast('启动失败: ' + (e.message || '请检查麦克风权限'));
+    }
+  }
+
+  function handleStreamEvent(data) {
+    if (data.type === 'partial') {
+      output.value = data.text;
+      updatePlaceholder();
+      statusText.textContent = '实时识别中…';
+    } else if (data.type === 'final') {
+      output.value = data.text;
+      updatePlaceholder();
+      const latency = Date.now() - streamStartTime;
+      document.getElementById('metaProvider').textContent = '厂商: 流式识别';
+      document.getElementById('metaLatency').textContent = `延迟: ${latency}ms`;
+      document.getElementById('metaDuration').textContent = '模式: 实时流式';
+      document.getElementById('metaCache').textContent = '缓存: 未命中';
+      metaBar.style.display = 'flex';
+      addHistory(data.text, 'stream', latency);
+      setUIState('done');
+      processing = false;
+      if (autoCopy.checked && data.text) {
+        copyText(data.text).then(() => showToast('已复制到剪贴板'));
+      }
+      closeWS();
+      setTimeout(() => setUIState('idle'), 2000);
+    } else if (data.type === 'error') {
+      setUIState('error', data.message);
+      showToast('识别失败: ' + data.message);
+      processing = false;
+      closeWS();
+    }
+  }
+
+  async function stopRecording() {
+    if (!recording) return;
+    recording = false;
+    processing = true;
+    setUIState('processing');
+    cleanupAudio();
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: 'end' }));
+    } else {
+      processing = false;
+      setUIState('idle');
+    }
+  }
+
+  function cleanupAudio() {
+    if (processor) {
+      processor.disconnect();
+      processor.onaudioprocess = null;
+      processor = null;
+    }
+    if (sourceNode) {
+      sourceNode.disconnect();
+      sourceNode = null;
+    }
+    if (audioContext) {
+      audioContext.close().catch(() => {});
+      audioContext = null;
+    }
+    if (audioStream) {
+      audioStream.getTracks().forEach(t => t.stop());
+      audioStream = null;
+    }
+  }
+
+  function closeWS() {
+    if (ws) {
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+        ws.close();
+      }
+      ws = null;
+    }
+  }
+
+  function downsampleTo16k(float32, sampleRate) {
+    const targetRate = 16000;
+    let samples = float32;
+    if (sampleRate !== targetRate) {
+      const ratio = sampleRate / targetRate;
+      const newLen = Math.floor(float32.length / ratio);
+      const down = new Float32Array(newLen);
+      for (let i = 0; i < newLen; i++) {
+        down[i] = float32[Math.floor(i * ratio)];
+      }
+      samples = down;
+    }
+    const buf = new Int16Array(samples.length);
+    for (let i = 0; i < samples.length; i++) {
+      const s = Math.max(-1, Math.min(1, samples[i]));
+      buf[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    return buf.buffer;
+  }
+
+  async function recognize(blob, filename) {
+    processing = true;
+    setUIState('processing');
+    metaBar.style.display = 'none';
+
+    const form = new FormData();
+    form.append('file', blob, filename);
+    form.append('language', language.value);
+    form.append('enable_punc', 'true');
+    form.append('provider', 'auto');
+    form.append('format', filename.split('.').pop() || 'webm');
+
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/asr/recognize`, {
+        method: 'POST',
+        body: form,
+      });
+
+      const json = await res.json();
+      if (!res.ok || json.code !== 0) {
+        throw new Error(json.message || `识别失败 (${res.status})`);
+      }
+
+      const d = json.data;
+      output.value = d.text;
+      updatePlaceholder();
+
+      document.getElementById('metaProvider').textContent = `厂商: ${d.provider}`;
+      document.getElementById('metaLatency').textContent = `延迟: ${d.latency_ms}ms`;
+      document.getElementById('metaDuration').textContent = `时长: ${d.duration_ms}ms`;
+      document.getElementById('metaCache').textContent = `缓存: ${d.cache_hit ? '命中' : '未命中'}`;
+      metaBar.style.display = 'flex';
+
+      addHistory(d.text, d.provider, d.latency_ms);
+      setUIState('done');
+
+      if (autoCopy.checked && d.text) {
+        await copyText(d.text);
+        showToast('已复制到剪贴板');
+      }
+    } catch (e) {
+      setUIState('error', e.message);
+      showToast('识别失败: ' + e.message);
+    } finally {
+      processing = false;
+      if (!recording) {
+        setTimeout(() => setUIState('idle'), 2000);
+      }
+    }
+  }
+
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+  }
+
+  function setUIState(state, message) {
+    statusDot.className = 'status-dot';
+    recordBtn.classList.remove('recording');
+    recordBtn.disabled = processing && state !== 'recording';
+
+    switch (state) {
+      case 'recording':
+        statusDot.classList.add('recording');
+        statusText.textContent = '正在录音…';
+        recordBtn.classList.add('recording');
+        recordBtnText.textContent = '停止录音';
+        break;
+      case 'processing':
+        statusDot.classList.add('processing');
+        statusText.textContent = '识别中…';
+        recordBtnText.textContent = '识别中…';
+        recordBtn.disabled = true;
+        break;
+      case 'done':
+        statusText.textContent = '识别完成';
+        recordBtnText.textContent = '开始录音';
+        break;
+      case 'error':
+        statusDot.classList.add('error');
+        statusText.textContent = message || '出错了';
+        recordBtnText.textContent = '开始录音';
+        break;
+      default:
+        statusText.textContent = '等待开始';
+        recordBtnText.textContent = '开始录音';
+        recordBtn.disabled = false;
+    }
+  }
+
+  function updatePlaceholder() {
+    placeholder.classList.toggle('hidden', output.value.length > 0);
+  }
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
+  }
+
+  function addHistory(text, provider, latency) {
+    const list = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    list.unshift({
+      text,
+      provider,
+      latency,
+      time: new Date().toISOString(),
+    });
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 50)));
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const list = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    if (list.length === 0) {
+      historyList.innerHTML = '<li class="history-empty">暂无记录</li>';
+      return;
+    }
+    historyList.innerHTML = list.map((item, i) => `
+      <li class="history-item" data-idx="${i}">
+        <div class="history-text">${escapeHtml(item.text)}</div>
+        <div class="history-meta">${formatTime(item.time)} · ${item.provider} · ${item.latency}ms</div>
+      </li>
+    `).join('');
+
+    historyList.querySelectorAll('.history-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const idx = el.dataset.idx;
+        const item = list[idx];
+        output.value = item.text;
+        updatePlaceholder();
+        showToast('已填入文本');
+      });
+    });
+  }
+
+  function formatTime(iso) {
+    const d = new Date(iso);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+  </script>
+</body>
+</html>
