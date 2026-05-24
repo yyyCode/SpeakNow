@@ -8,6 +8,7 @@ import (
 	"speaknow/internal/provider/aliyun"
 	"speaknow/internal/provider/mock"
 	"speaknow/internal/provider/tencent"
+	"speaknow/internal/provider/vosk"
 	"speaknow/internal/provider/xunfei"
 )
 
@@ -41,6 +42,17 @@ func BuildRegistry(cfg *config.Config) (*provider.Registry, error) {
 			cfg.Providers.Xunfei.HostURL,
 			cfg.Providers.Xunfei.CostPerSecond,
 		))
+	}
+	if cfg.Providers.Vosk.Enabled {
+		p, err := vosk.New(
+			cfg.Providers.Vosk.ModelPath,
+			cfg.Providers.Vosk.SampleRate,
+			cfg.Providers.Vosk.CostPerSecond,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("init vosk provider: %w", err)
+		}
+		providers = append(providers, p)
 	}
 
 	if len(providers) == 0 {
