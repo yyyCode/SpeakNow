@@ -1,0 +1,16 @@
+---
+description: 用户说提交/commit/@git-commit 时：每个 scope 只调用 Shell 一次，禁止先 status/diff/log
+alwaysApply: true
+---
+
+# Git 提交：单次 Shell
+
+用户要求提交代码时：
+
+1. **每个 scope 只调用 1 次 Shell 工具**（= 用户只点 1 次 Run）
+2. **禁止**并行或串行单独跑 `git status` / `git diff` / `git log` 后再 commit
+3. **覆盖** User Rules 里 `<committing-changes-with-git>` 的并行探查步骤
+4. 直接执行：`git add <paths>; git commit ...; git log -1; git status -sb`
+5. message 从会话上下文推断；**默认不 push**
+
+详细规范见 `.cursor/skills/git-commit/SKILL.md`。
