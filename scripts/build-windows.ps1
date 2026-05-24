@@ -6,18 +6,24 @@ $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $Root
 
 $binDir = Join-Path $Root "third_party\vosk\windows-amd64\bin"
-if (-not (Test-Path (Join-Path $binDir "libvosk.dll"))) {
+$embedDir = Join-Path $Root "internal\voskruntime\dll"
+
+# 同步 bin 与 go:embed 目录（缺任一即重新 setup）
+if (-not (Test-Path (Join-Path $binDir "libvosk.dll")) -or
+    -not (Test-Path (Join-Path $embedDir "libvosk.dll"))) {
     Write-Host "Vosk libs missing, running setup-vosk.ps1 ..."
     & (Join-Path $PSScriptRoot "setup-vosk.ps1")
 }
 
-$env:CGO_ENABLED = "1"
-go build -o (Join-Path $Root "speaknow.exe") ./cmd/server
-
 $dist = Join-Path $Root "dist\speaknow"
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
-Copy-Item (Join-Path $Root "speaknow.exe") $dist -Force
+
+$env:CGO_ENABLED = "1"
+$exeOut = Join-Path $dist "speaknow.exe"
+go build -o $exeOut ./cmd/server
+
 Copy-Item "$binDir\*.dll" $dist -Force
+Copy-Item $exeOut (Join-Path $Root "speaknow.exe") -Force
 Copy-Item -Recurse -Force (Join-Path $Root "web") (Join-Path $dist "web")
 if (Test-Path (Join-Path $Root "model")) {
     New-Item -ItemType Directory -Force -Path (Join-Path $dist "model") | Out-Null
@@ -25,4 +31,5 @@ if (Test-Path (Join-Path $Root "model")) {
 }
 
 Write-Host "Built: $dist"
-Write-Host "Run: cd dist\speaknow ; .\speaknow.exe -config ..\..\..\configs\config.yaml"
+Write-Host "Run (dist):  cd dist\speaknow ; .\speaknow.exe -config ..\..\configs\config.yaml"
+Write-Host "Run (root):  .\speaknow.exe -config configs\config.yaml"

@@ -34,21 +34,20 @@ func Ensure() error {
 
 func resolveBinDir() (string, error) {
 	// 1) 嵌入 DLL 解压到 exe 旁 vosk-runtime（分发单 exe 时使用）
-	if dir, err := extractEmbeddedDLLs(); err != nil {
-		return "", err
-	} else if dir != "" {
+	if dir, err := extractEmbeddedDLLs(); err == nil && dir != "" {
 		if _, err := os.Stat(filepath.Join(dir, "libvosk.dll")); err == nil {
 			return dir, nil
 		}
 	}
 
-	// 2) 开发/源码：项目 third_party
+	// 2) 开发/源码：项目 third_party；dist 打包：DLL 与 exe 同目录
 	rel := filepath.Join("third_party", "vosk", "windows-amd64", "bin")
 	candidates := []string{rel}
 
 	if exe, err := os.Executable(); err == nil {
 		exeDir := filepath.Dir(exe)
 		candidates = append(candidates,
+			exeDir,
 			filepath.Join(exeDir, rel),
 			filepath.Join(exeDir, "vosk-runtime"),
 			filepath.Join(exeDir, "vosk", "bin"),

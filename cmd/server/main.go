@@ -10,10 +10,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
 	"speaknow/internal/assets"
@@ -57,29 +55,12 @@ func main() {
 		log.Fatal("build provider registry", zap.Error(err))
 	}
 
-	redisClient := redis.NewClient(&redis.Options{
-		Addr:     cfg.Redis.Addr,
-		Password: cfg.Redis.Password,
-		DB:       cfg.Redis.DB,
-	})
-	defer func() {
-		if err := redisClient.Close(); err != nil {
-			log.Warn("close redis client", zap.Error(err))
-		}
-	}()
-
-	pingCtx, pingCancel := context.WithTimeout(context.Background(), 3*time.Second)
-	if err := redisClient.Ping(pingCtx).Err(); err != nil {
-		log.Warn("redis unavailable, cache and distributed rate limit disabled", zap.Error(err))
-	}
-	pingCancel()
-
-	cacheSvc := cache.NewService(redisClient, cfg.Redis.CacheTTL)
+	cacheSvc := cache.NewService(cfg.Cache.TTL)
 	routerSvc := router.New(registry, &cfg.ASR, log)
 	costSvc := cost.New()
 	asrSvc := asr.New(routerSvc, cacheSvc, costSvc, log)
 
-	rateLimiter := middleware.NewRateLimiter(cfg.RateLimit, redisClient)
+	rateLimiter := middleware.NewRateLimiter(cfg.RateLimit)
 
 	gin.SetMode(cfg.Server.Mode)
 	r := gin.New()
@@ -93,11 +74,7 @@ func main() {
 
 	asrHandler := handler.NewASRHandler(asrSvc, routerSvc, costSvc, cfg.ASR.MaxAudioSize)
 	wsHandler := handler.NewWSHandler(routerSvc)
-	healthHandler := handler.NewHealthHandler(map[string]func(*gin.Context) error{
-		"redis": func(c *gin.Context) error {
-			return cacheSvc.Ping(c.Request.Context())
-		},
-	})
+	healthHandler := handler.NewHealthHandler(nil)
 
 	webHandler, err := assets.WebHandler()
 	if err != nil {

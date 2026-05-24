@@ -8,14 +8,8 @@ server:
   idle_timeout: 120s
   shutdown_timeout: 30s
 
-redis:
-  addr: "127.0.0.1:6379"
-  password: ""
-  db: 0
-  cache_ttl: 24h
-
-postgres:
-  enabled: false
+cache:
+  ttl: 24h
 
 ratelimit:
   global_qps: 100

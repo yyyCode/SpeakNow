@@ -10,8 +10,7 @@ import (
 
 type Config struct {
 	Server    ServerConfig    `mapstructure:"server"`
-	Redis     RedisConfig     `mapstructure:"redis"`
-	Postgres  PostgresConfig  `mapstructure:"postgres"`
+	Cache     CacheConfig     `mapstructure:"cache"`
 	RateLimit RateLimitConfig `mapstructure:"ratelimit"`
 	ASR       ASRConfig       `mapstructure:"asr"`
 	Providers ProvidersConfig `mapstructure:"providers"`
@@ -29,16 +28,8 @@ type ServerConfig struct {
 	ShutdownTimeout   time.Duration `mapstructure:"shutdown_timeout"`
 }
 
-type RedisConfig struct {
-	Addr     string        `mapstructure:"addr"`
-	Password string        `mapstructure:"password"`
-	DB       int           `mapstructure:"db"`
-	CacheTTL time.Duration `mapstructure:"cache_ttl"`
-}
-
-type PostgresConfig struct {
-	DSN     string `mapstructure:"dsn"`
-	Enabled bool   `mapstructure:"enabled"`
+type CacheConfig struct {
+	TTL time.Duration `mapstructure:"ttl"`
 }
 
 type RateLimitConfig struct {
@@ -139,5 +130,8 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Server.ShutdownTimeout <= 0 {
 		c.Server.ShutdownTimeout = 30 * time.Second
+	}
+	if c.Cache.TTL <= 0 {
+		c.Cache.TTL = 24 * time.Hour
 	}
 }

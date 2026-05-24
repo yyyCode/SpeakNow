@@ -91,6 +91,9 @@ func extractModel() (string, error) {
 	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 		return "", err
 	}
+	if err := os.MkdirAll(dest, 0o755); err != nil {
+		return "", err
+	}
 	const prefix = "model/vosk-model-small-cn-0.22"
 	err = fs.WalkDir(modelFS, prefix, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -103,6 +106,9 @@ func extractModel() (string, error) {
 		target := filepath.Join(dest, rel)
 		if d.IsDir() {
 			return os.MkdirAll(target, 0o755)
+		}
+		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+			return err
 		}
 		data, err := modelFS.ReadFile(path)
 		if err != nil {

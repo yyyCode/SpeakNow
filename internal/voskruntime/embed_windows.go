@@ -41,7 +41,8 @@ func extractEmbeddedDLLs() (string, error) {
 			if e.IsDir() {
 				continue
 			}
-			data, err := embeddedDLLs.ReadFile(filepath.Join("dll", e.Name()))
+			// embed.FS 路径必须用正斜杠，不能用 filepath.Join
+			data, err := embeddedDLLs.ReadFile("dll/" + e.Name())
 			if err != nil {
 				extractErr = err
 				return
