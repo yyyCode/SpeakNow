@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"os/signal"
-	"net/http"
 	"syscall"
 	"time"
 
@@ -52,11 +54,17 @@ func main() {
 		Password: cfg.Redis.Password,
 		DB:       cfg.Redis.DB,
 	})
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	if err := redisClient.Ping(ctx).Err(); err != nil {
+	defer func() {
+		if err := redisClient.Close(); err != nil {
+			log.Warn("close redis client", zap.Error(err))
+		}
+	}()
+
+	pingCtx, pingCancel := context.WithTimeout(context.Background(), 3*time.Second)
+	if err := redisClient.Ping(pingCtx).Err(); err != nil {
 		log.Warn("redis unavailable, cache and distributed rate limit disabled", zap.Error(err))
 	}
-	cancel()
+	pingCancel()
 
 	cacheSvc := cache.NewService(redisClient, cfg.Redis.CacheTTL)
 	routerSvc := router.New(registry, &cfg.ASR, log)
@@ -94,19 +102,61 @@ func main() {
 	r.GET("/api/v1/asr/stream", wsHandler.Stream)
 
 	srvAddr := cfg.Server.Addr()
+	rootCtx, rootCancel := context.WithCancel(context.Background())
+	defer rootCancel()
+
+	srv := &http.Server{
+		Addr:              srvAddr,
+		Handler:           r,
+		ReadHeaderTimeout: cfg.Server.ReadHeaderTimeout,
+		ReadTimeout:       cfg.Server.ReadTimeout,
+		WriteTimeout:      cfg.Server.WriteTimeout,
+		IdleTimeout:       cfg.Server.IdleTimeout,
+		BaseContext: func(net.Listener) context.Context {
+			return rootCtx
+		},
+	}
+
 	log.Info("SpeakNow server starting",
 		zap.String("addr", srvAddr),
 		zap.Strings("providers", registry.Names()),
+		zap.Duration("read_header_timeout", cfg.Server.ReadHeaderTimeout),
+		zap.Duration("read_timeout", cfg.Server.ReadTimeout),
+		zap.Duration("write_timeout", cfg.Server.WriteTimeout),
+		zap.Duration("idle_timeout", cfg.Server.IdleTimeout),
+		zap.Duration("shutdown_timeout", cfg.Server.ShutdownTimeout),
 	)
 
+	errCh := make(chan error, 1)
 	go func() {
-		if err := r.Run(srvAddr); err != nil {
-			log.Fatal("server stopped", zap.Error(err))
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- err
 		}
+		close(errCh)
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	log.Info("shutting down...")
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			log.Fatal("server stopped", zap.Error(err))
+		}
+	case sig := <-quit:
+		log.Info("shutdown signal received", zap.String("signal", sig.String()))
+	}
+
+	rootCancel()
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
+	defer shutdownCancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Error("graceful shutdown timed out or failed", zap.Error(err))
+	} else {
+		log.Info("server stopped gracefully")
+	}
+
+	signal.Stop(quit)
 }

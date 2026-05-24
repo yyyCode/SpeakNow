@@ -1,0 +1,21 @@
+[Unit]
+Description=SpeakNow ASR Server
+Documentation=https://github.com/yyyCode/SpeakNow
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=speaknow
+Group=speaknow
+WorkingDirectory=/opt/speaknow
+ExecStart=/opt/speaknow/bin/speaknow -config /etc/speaknow/config.yaml
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65535
+
+# 可选：用环境变量覆盖配置（Viper 前缀 SPEAKNOW_）
+# Environment=SPEAKNOW_REDIS_ADDR=127.0.0.1:6379
+
+[Install]
+WantedBy=multi-user.target

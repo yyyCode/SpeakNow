@@ -55,6 +55,11 @@ func (h *WSHandler) Stream(c *gin.Context) {
 		return
 	}
 
+	go func() {
+		<-ctx.Done()
+		_ = conn.Close()
+	}()
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -70,7 +75,12 @@ func (h *WSHandler) Stream(c *gin.Context) {
 		}
 	}()
 
+readLoop:
 	for {
+		if ctx.Err() != nil {
+			break
+		}
+
 		msgType, data, err := conn.ReadMessage()
 		if err != nil {
 			break
@@ -81,7 +91,7 @@ func (h *WSHandler) Stream(c *gin.Context) {
 			select {
 			case audioIn <- data:
 			case <-ctx.Done():
-				break
+				break readLoop
 			}
 		case websocket.TextMessage:
 			var cmd struct {

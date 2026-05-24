@@ -2,6 +2,12 @@ server:
   host: "0.0.0.0"
   port: 8080
   mode: "debug"
+  # HTTP 超时（防慢连接）；read/write 为 0 表示不限制，以支持 WebSocket 长连接
+  read_header_timeout: 10s
+  read_timeout: 0s
+  write_timeout: 0s
+  idle_timeout: 120s
+  shutdown_timeout: 30s
 
 redis:
   addr: "127.0.0.1:6379"
