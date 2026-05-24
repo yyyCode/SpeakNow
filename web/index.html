@@ -394,6 +394,14 @@
               <option value="ko-KR">한국어</option>
             </select>
           </div>
+          <div class="lang-group">
+            <label for="provider">识别引擎</label>
+            <select id="provider">
+              <option value="auto">自动（优先云端）</option>
+              <option value="xunfei">讯飞云端</option>
+              <option value="vosk">Vosk 本地</option>
+            </select>
+          </div>
           <div class="toggle-group">
             <label class="toggle">
               <input type="checkbox" id="autoCopy" checked />
@@ -463,6 +471,7 @@
   const statusDot = document.getElementById('statusDot');
   const statusText = document.getElementById('statusText');
   const language = document.getElementById('language');
+  const provider = document.getElementById('provider');
   const autoCopy = document.getElementById('autoCopy');
   const metaBar = document.getElementById('metaBar');
   const historyList = document.getElementById('historyList');
@@ -480,13 +489,24 @@
 
   const HISTORY_KEY = 'speaknow_history';
   const AUTO_COPY_KEY = 'speaknow_auto_copy';
+  const PROVIDER_KEY = 'speaknow_provider';
 
   // 恢复设置
   if (localStorage.getItem(AUTO_COPY_KEY) !== null) {
     autoCopy.checked = localStorage.getItem(AUTO_COPY_KEY) === 'true';
   }
+  if (localStorage.getItem(PROVIDER_KEY)) {
+    provider.value = localStorage.getItem(PROVIDER_KEY);
+  }
   autoCopy.addEventListener('change', () => {
     localStorage.setItem(AUTO_COPY_KEY, autoCopy.checked);
+  });
+  provider.addEventListener('change', () => {
+    localStorage.setItem(PROVIDER_KEY, provider.value);
+    if (provider.value === 'vosk' && language.value !== 'zh-CN') {
+      language.value = 'zh-CN';
+      showToast('本地 Vosk 模型仅支持中文普通话');
+    }
   });
 
   output.addEventListener('input', updatePlaceholder);
@@ -534,7 +554,7 @@
       const params = new URLSearchParams({
         language: language.value,
         enable_punc: 'true',
-        provider: 'auto',
+        provider: provider.value,
       });
       ws = new WebSocket(`${wsProto}//${location.host}/api/v1/asr/stream?${params}`);
       ws.binaryType = 'arraybuffer';
@@ -590,12 +610,12 @@
       output.value = data.text;
       updatePlaceholder();
       const latency = Date.now() - streamStartTime;
-      document.getElementById('metaProvider').textContent = '厂商: 流式识别';
+      document.getElementById('metaProvider').textContent = `厂商: ${data.provider || provider.value}`;
       document.getElementById('metaLatency').textContent = `延迟: ${latency}ms`;
       document.getElementById('metaDuration').textContent = '模式: 实时流式';
       document.getElementById('metaCache').textContent = '缓存: 未命中';
       metaBar.style.display = 'flex';
-      addHistory(data.text, 'stream', latency);
+      addHistory(data.text, data.provider || provider.value, latency);
       setUIState('done');
       processing = false;
       if (autoCopy.checked && data.text) {
@@ -684,7 +704,7 @@
     form.append('file', blob, filename);
     form.append('language', language.value);
     form.append('enable_punc', 'true');
-    form.append('provider', 'auto');
+    form.append('provider', provider.value);
     form.append('format', filename.split('.').pop() || 'webm');
 
     try {
