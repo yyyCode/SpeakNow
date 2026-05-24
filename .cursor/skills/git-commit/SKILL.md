@@ -9,7 +9,31 @@ disable-model-invocation: true
 
 # SpeakNow Git Commit
 
-仅在用户**明确要求**创建 commit 时执行。若意图不清，先询问再提交。
+用户通过 `@git-commit`、提及本 Skill，或说「提交 / commit / push」时，视为**已授权整次提交流程**——见下方「自动执行」。
+
+## 自动执行（重要）
+
+**禁止**在 `status` → `diff` → `add` → `commit` → `push` 之间停下来问「是否继续」「是否 add」「是否 push」。用户已发起提交请求时，**一轮对话内跑完全流程**，最后只给一次结果汇总。
+
+### 减少 Cursor 逐步点「Run」的办法
+
+1. **合并为单次终端调用**（推荐）：同一 scope 的探查 + 提交写在**一条** Shell 命令里（PowerShell 用 `;` 连接），例如：
+   ```powershell
+   git status; git diff; git diff --staged; git log --oneline -5
+   ```
+   ```powershell
+   git add .cursor/rules/main-role.mdc .cursor/skills/git-commit/SKILL.md; git commit -m "chore(cursor): 标题" -m "- 要点1" -m "- 要点2"; git status
+   ```
+2. **Cursor 设置**（用户侧，一次配置）：`Settings` → `Cursor Settings` → `Agents` → **Auto-Run** 选 `Run Everything`，或在 **Command Allowlist** 加入 `git`、`git status`、`git diff`、`git add`、`git commit`、`git push`。之后 Agent 跑 git 时不再逐步确认。
+3. 用户同一句里含 **push**（如「提交并 push」）→ 在 commit 成功后**直接 push**，不要再问。
+
+### 仍可询问的唯一情况
+
+- 工作区**无任何**可提交变更
+- 发现 `speaknow.exe`、密钥等**禁止入库**文件
+- 用户指令本身矛盾（例如「不要提交 .cursor」但又只有 .cursor 变更）
+
+多 scope 时：**默认自动按 scope 连续拆分多次 commit**，不要为「要不要拆分」反复确认。
 
 ## 核心原则
 
@@ -21,7 +45,7 @@ disable-model-invocation: true
 
 - **禁止入库**：`speaknow.exe`、大型构建产物（见 `docs/RELEASE.md`）、`.env`、密钥、token
 - **无变更则停止**：无有效变更时不创建空 commit
-- **混合领域**：若工作区同时有多个 scope 的改动，**默认拆成多次 commit**（按 scope 分批 `git add` + `commit`）；若用户明确要求「一次提交全部」，需在回复中说明混入了哪些领域并征得同意
+- **混合领域**：多个 scope 时**自动**按 scope 分批 `git add` + `commit`（每批一条 Shell 命令）；仅当用户说「全部一次提交」时才混在一个 commit，并在最终汇总里说明
 
 ## 分析变更（并行执行）
 
@@ -41,7 +65,7 @@ git log --oneline -10
 | 3 | 根据 diff 性质选定 **type**（见下表） |
 | 4 | 写 `type(scope): 简短标题`，正文用中文概括「改了什么、为何改」 |
 
-用户未 `git add` 时：先说明拟暂存文件与归属 scope，再按 scope 分批 `git add`（不要 `git add .`，除非用户明确要求）。
+用户未 `git add` 时：**直接**按 scope 执行 `git add <路径>`（不要 `git add .`，除非用户明确要求），无需先等用户确认文件列表。
 
 ## Type 判定（Conventional Commits）
 
@@ -120,23 +144,23 @@ chore(cursor): 添加 git-commit Agent Skill
 - 约定 Conventional Commits 与按 scope 拆分提交
 ```
 
-## 执行提交（按 scope 分批）
+## 执行提交（按 scope 分批，每批一条命令）
 
-每个 scope 一批：
+**每个 scope 只调用一次 Shell**（PowerShell 示例，`-m` 可重复写正文列表）：
 
-```bash
-git add <本 scope 相关文件>
-git commit -m "$(cat <<'EOF'
-<type>(<scope>): <标题>
-
-<正文摘要>
-
-EOF
-)"
-git status
+```powershell
+git add <scope 文件...>; git commit -m "<type>(<scope>): <标题>" -m "- <要点1>" -m "- <要点2>"; git status
 ```
 
-全部 scope 提交完成后，再向用户汇总各 commit 的 hash 与 message。
+多个 scope 时：对每个 scope 各发**一条**上述命令（仍不要中途询问）。
+
+用户要求 push 时，在所有 commit 完成后**再发一条**：
+
+```powershell
+git push; git status
+```
+
+全部完成后，**一次性**汇总：type/scope 理由、每个 commit 的 hash 与完整 message、分支状态。
 
 ## 安全协议
 
@@ -146,11 +170,11 @@ git status
 - hook 失败：修复后**新建** commit
 - **不要** push，除非用户明确要求
 
-## 回复用户
+## 回复用户（仅最终一条消息）
 
-说明：
+不要逐步汇报「接下来我要 commit」；流程跑完后统一说明：
 
 1. 推断的 **type / scope** 及理由（一句话）
-2. 若拆分：每个 commit 的文件列表与完整 message
-3. 若拒绝混提：列出了哪些 scope 建议分开提交
-4. 最终 `git status` 与分支状态
+2. 每个 commit 的 hash、文件列表、完整 message
+3. 是否已 push
+4. 最终 `git status`
