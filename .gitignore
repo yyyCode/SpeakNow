@@ -33,6 +33,9 @@ data/
 .speaknow-data/
 vosk-runtime/
 
+# PR 分析报告（本地生成，勿提交）
+reports/pr/
+
 # Go vendor（若使用 vendor 目录再单独处理）
 vendor/
 
