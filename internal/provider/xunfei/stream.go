@@ -70,8 +70,9 @@ func (p *Provider) StreamRecognize(ctx context.Context, audioIn <-chan []byte, o
 				text := decoder.String()
 				if text != "" {
 					out <- domain.StreamResult{
-						Type: "partial",
-						Text: text,
+						Type:     "partial",
+						Text:     text,
+						Provider: p.Name(),
 					}
 				}
 
@@ -80,6 +81,7 @@ func (p *Provider) StreamRecognize(ctx context.Context, audioIn <-chan []byte, o
 						Type:       "final",
 						Text:       text,
 						Confidence: 0.9,
+						Provider:   p.Name(),
 					}
 					readDone <- nil
 					return
