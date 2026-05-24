@@ -120,6 +120,9 @@ func extractModel() (string, error) {
 }
 
 func cacheRoot() (string, error) {
+	if d := os.Getenv("SPEAKNOW_DATA_DIR"); d != "" {
+		return d, os.MkdirAll(d, 0o755)
+	}
 	if exe, err := os.Executable(); err == nil {
 		dir := filepath.Join(filepath.Dir(exe), ".speaknow-data")
 		return dir, os.MkdirAll(dir, 0o755)

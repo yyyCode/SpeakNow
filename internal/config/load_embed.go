@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/viper"
 )
@@ -10,6 +11,9 @@ import (
 func LoadBytes(data []byte) (*Config, error) {
 	v := viper.New()
 	v.SetConfigType("yaml")
+	v.SetEnvPrefix("SPEAKNOW")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
 	if err := v.ReadConfig(bytes.NewReader(data)); err != nil {
 		return nil, fmt.Errorf("read embedded config: %w", err)
 	}

@@ -30,9 +30,7 @@ https://github.com/alphacep/vosk-api/releases/download/v0.3.45/vosk-win64-0.3.45
 ```
 
 - **开发者**：`third_party` + `go build` 即可，无需改本机 Go 模块缓存。
-- **最终用户**：
-  - 方式 A：只拷贝 `dist/speaknow/` 整个文件夹（exe + dll，最简单可靠）
-  - 方式 B：只拷贝单个 `speaknow.exe`（内含嵌入 DLL，首次运行解压到同目录 `vosk-runtime/`）
+- **最终用户**：只拷贝根目录 `speaknow.exe`（内嵌 core + DLL，首次运行解压到 `.speaknow-data/runtime/`）
   - 语音模型 `model/vosk-model-small-cn-0.22` 需单独放置（体积大，不打进 exe）
 
 ## 换电脑 / Git
@@ -42,4 +40,4 @@ https://github.com/alphacep/vosk-api/releases/download/v0.3.45/vosk-win64-0.3.45
 
 ## 说明
 
-Vosk 通过 CGO 调用 **动态库**，无法在 Windows 上完全静态链接进单个 exe；当前方案是 **DLL 嵌入 + 启动时解压**，或 **dist 目录随 exe 附带 DLL**。
+Vosk 通过 CGO 调用 **动态库**，无法在 Windows 上完全静态链接进单个 exe；当前方案是 **DLL 嵌入 + 启动时解压到 `vosk-runtime/`**。

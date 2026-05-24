@@ -197,7 +197,7 @@ go run ./cmd/server -config configs/config.yaml
 | `scripts/setup-vosk.ps1` | 解压/下载 Vosk Win64 库到 `third_party/vosk` 与 `internal/voskruntime/dll` |
 | `scripts/prepare-bundle.ps1` | 将 `web/`、`model/` 复制到 `internal/assets` 供 `go:embed` |
 | `scripts/build-standalone.ps1` | 一键构建单文件 `speaknow.exe` |
-| `scripts/build-windows.ps1` | 构建 exe 并组装 `dist/speaknow/` 目录（exe + dll + web） |
+| `scripts/build-windows.ps1` | 在项目根目录构建 `speaknow.exe`（Vosk DLL 内嵌） |
 
 ---
 

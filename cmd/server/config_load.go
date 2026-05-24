@@ -13,8 +13,8 @@ func loadConfig(path string) (*config.Config, error) {
 			return config.Load(path)
 		}
 	}
-	if len(assets.DefaultConfig()) > 0 {
-		return config.LoadBytes(assets.DefaultConfig())
+	if b := assets.DefaultConfig(); len(b) > 0 {
+		return config.LoadBytes(b)
 	}
-	return config.Load("configs/config.yaml")
+	return config.LoadBytes(config.BuiltinDefault())
 }

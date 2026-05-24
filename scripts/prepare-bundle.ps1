@@ -21,6 +21,7 @@ if (Test-Path (Join-Path $Assets "model")) { Remove-Item (Join-Path $Assets "mod
 New-Item -ItemType Directory -Force -Path (Split-Path $modelDst) | Out-Null
 Copy-Item $webSrc $webDst -Recurse -Force
 Copy-Item $modelSrc $modelDst -Recurse -Force
+Copy-Item (Join-Path $Root "configs\config.release.yaml") (Join-Path $Assets "default.yaml") -Force
 
 $mb = [math]::Round((Get-ChildItem $Assets -Recurse | Measure-Object Length -Sum).Sum / 1MB, 1)
 Write-Host "Bundle prepared under internal/assets ($mb MB). Run: go build -o speaknow.exe ./cmd/server"

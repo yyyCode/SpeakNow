@@ -1,4 +1,4 @@
-# 构建 Windows 版：先确保 Vosk 库就绪，再编译并组装 dist 目录
+# 构建 Windows 版：根目录生成 speaknow.exe（内嵌 speaknow-core + Vosk DLL）
 # 用法: .\scripts\build-windows.ps1
 
 $ErrorActionPreference = "Stop"
@@ -7,29 +7,35 @@ Set-Location $Root
 
 $binDir = Join-Path $Root "third_party\vosk\windows-amd64\bin"
 $embedDir = Join-Path $Root "internal\voskruntime\dll"
+$payloadDir = Join-Path $Root "cmd\launcher\payload"
 
-# 同步 bin 与 go:embed 目录（缺任一即重新 setup）
 if (-not (Test-Path (Join-Path $binDir "libvosk.dll")) -or
     -not (Test-Path (Join-Path $embedDir "libvosk.dll"))) {
     Write-Host "Vosk libs missing, running setup-vosk.ps1 ..."
     & (Join-Path $PSScriptRoot "setup-vosk.ps1")
 }
 
-$dist = Join-Path $Root "dist\speaknow"
-New-Item -ItemType Directory -Force -Path $dist | Out-Null
+Copy-Item (Join-Path $Root "configs\config.release.yaml") (Join-Path $Root "internal\assets\default.yaml") -Force
 
+New-Item -ItemType Directory -Force -Path $payloadDir | Out-Null
+Get-ChildItem $payloadDir -File | Remove-Item -Force
+
+$coreOut = Join-Path $payloadDir "speaknow-core.exe"
 $env:CGO_ENABLED = "1"
-$exeOut = Join-Path $dist "speaknow.exe"
-go build -o $exeOut ./cmd/server
+go build -o $coreOut ./cmd/server
+Copy-Item "$binDir\*.dll" $payloadDir -Force
 
-Copy-Item "$binDir\*.dll" $dist -Force
-Copy-Item $exeOut (Join-Path $Root "speaknow.exe") -Force
-Copy-Item -Recurse -Force (Join-Path $Root "web") (Join-Path $dist "web")
-if (Test-Path (Join-Path $Root "model")) {
-    New-Item -ItemType Directory -Force -Path (Join-Path $dist "model") | Out-Null
-    Write-Host "Tip: copy model/vosk-model-small-cn-0.22 to dist\speaknow\model\ for offline ASR"
+$launcherOut = Join-Path $Root "speaknow.exe"
+go build -o $launcherOut ./cmd/launcher
+
+$coreMB = [math]::Round((Get-Item $coreOut).Length / 1MB, 1)
+$totalMB = [math]::Round((Get-Item $launcherOut).Length / 1MB, 1)
+Write-Host ""
+Write-Host "Built: $launcherOut ($totalMB MB, embeds core $coreMB MB + Vosk DLL)"
+Write-Host "Run:  double-click speaknow.exe  (or: .\speaknow.exe -config path\to\custom.yaml)"
+Write-Host "First run extracts runtime to .speaknow-data\runtime\ (no extra DLL beside speaknow.exe)."
+if (Test-Path (Join-Path $Root "model\vosk-model-small-cn-0.22")) {
+    Write-Host "Model: model\vosk-model-small-cn-0.22"
+} else {
+    Write-Host "Tip: model\vosk-model-small-cn-0.22 for offline Vosk, or build-standalone.ps1 to embed model."
 }
-
-Write-Host "Built: $dist"
-Write-Host "Run (dist):  cd dist\speaknow ; .\speaknow.exe -config ..\..\configs\config.yaml"
-Write-Host "Run (root):  .\speaknow.exe -config configs\config.yaml"

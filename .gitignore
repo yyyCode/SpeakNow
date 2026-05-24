@@ -1,5 +1,13 @@
 # 构建产物（用 GitHub Release 分发大 exe，勿提交进仓库）
 speaknow.exe
+speaknow-core.exe
+/libvosk.dll
+/libgcc_s_seh-1.dll
+/libstdc++-6.dll
+/libwinpthread-1.dll
+cmd/launcher/payload/*
+!cmd/launcher/payload/.gitkeep
+internal/launcher/
 /bin/
 /dist/
 *.exe~
