@@ -16,7 +16,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
-	"speaknow/internal/config"
+	"speaknow/internal/assets"
 	"speaknow/internal/handler"
 	"speaknow/internal/middleware"
 	"speaknow/internal/provider/factory"
@@ -28,13 +28,21 @@ import (
 )
 
 func main() {
-	configPath := flag.String("config", "configs/config.yaml", "config file path")
+	configPath := flag.String("config", "", "config file path (empty = use built-in default)")
 	flag.Parse()
 
-	cfg, err := config.Load(*configPath)
+	if err := assets.Prepare(); err != nil {
+		fmt.Fprintf(os.Stderr, "prepare assets: %v\n", err)
+		os.Exit(1)
+	}
+
+	cfg, err := loadConfig(*configPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "load config: %v\n", err)
 		os.Exit(1)
+	}
+	if cfg.Providers.Vosk.Enabled && (cfg.Providers.Vosk.ModelPath == "" || cfg.Providers.Vosk.ModelPath == "embedded") {
+		cfg.Providers.Vosk.ModelPath = assets.ModelPath()
 	}
 
 	log, err := logger.New(cfg.Log.Level, cfg.Log.Output)
@@ -91,7 +99,14 @@ func main() {
 		},
 	})
 
-	r.Static("/web", "./web")
+	webHandler, err := assets.WebHandler()
+	if err != nil {
+		log.Fatal("web handler", zap.Error(err))
+	}
+	r.GET("/web", func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "/web/")
+	})
+	r.GET("/web/*filepath", gin.WrapH(http.StripPrefix("/web", webHandler)))
 	r.GET("/", func(c *gin.Context) {
 		c.Redirect(http.StatusMovedPermanently, "/web/")
 	})

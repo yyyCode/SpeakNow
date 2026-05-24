@@ -30,6 +30,7 @@ type StreamResult struct {
 	Text       string  `json:"text,omitempty"`
 	Confidence float64 `json:"confidence,omitempty"`
 	Message    string  `json:"message,omitempty"`
+	Provider   string  `json:"provider,omitempty"`
 }
 
 type CallLog struct {

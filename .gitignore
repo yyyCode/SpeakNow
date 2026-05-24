@@ -1,15 +1,14 @@
-# Binaries
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-/speaknow
+# 构建产物（用 GitHub Release 分发大 exe，勿提交进仓库）
+speaknow.exe
 /bin/
 /dist/
+*.exe~
 
-# Go
-vendor/
+# 由 prepare-bundle 从 model/ 生成，体积大，换机后跑脚本即可
+internal/assets/model/
+
+# 可选：zip 原件较大时用 scripts/setup-vosk.ps1 下载，不必提交
+# third_party/vosk-win64.zip
 
 # IDE
 .idea/
@@ -21,15 +20,22 @@ vendor/
 .DS_Store
 Thumbs.db
 
-# Env & secrets
+# 环境变量与本地密钥配置（勿提交密钥）
 .env
 .env.*
 !.env.example
 configs/config.yaml
 
-# Logs
+# 日志与运行时数据
 *.log
 logs/
-
-# Docker volumes
 data/
+.speaknow-data/
+vosk-runtime/
+
+# Go vendor（若使用 vendor 目录再单独处理）
+vendor/
+
+# 建议提交进 Git 的依赖（换电脑可编译）：
+#   third_party/vosk/、internal/voskruntime/dll/、model/、internal/assets/web/
+# 单文件 exe：见 docs/RELEASE.md，上传到 GitHub Releases

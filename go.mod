@@ -3,6 +3,7 @@ module speaknow
 go 1.23
 
 require (
+	github.com/alphacep/vosk-api/go v0.3.50
 	github.com/gin-gonic/gin v1.10.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
@@ -56,3 +57,5 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/alphacep/vosk-api/go => ./third_party/vosk/bindings
