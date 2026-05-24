@@ -61,6 +61,7 @@ type ProvidersConfig struct {
 	Aliyun  AliyunProviderConfig  `mapstructure:"aliyun"`
 	Tencent TencentProviderConfig `mapstructure:"tencent"`
 	Xunfei  XunfeiProviderConfig  `mapstructure:"xunfei"`
+	Vosk    VoskProviderConfig    `mapstructure:"vosk"`
 }
 
 type MockProviderConfig struct {
@@ -90,6 +91,13 @@ type XunfeiProviderConfig struct {
 	APIKey        string  `mapstructure:"api_key"`
 	APISecret     string  `mapstructure:"api_secret"`
 	HostURL       string  `mapstructure:"host_url"`
+	CostPerSecond float64 `mapstructure:"cost_per_second"`
+}
+
+type VoskProviderConfig struct {
+	Enabled       bool    `mapstructure:"enabled"`
+	ModelPath     string  `mapstructure:"model_path"`
+	SampleRate    float64 `mapstructure:"sample_rate"`
 	CostPerSecond float64 `mapstructure:"cost_per_second"`
 }
 

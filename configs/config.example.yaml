@@ -55,6 +55,11 @@ providers:
     api_secret: ""
     host_url: "wss://iat-api.xfyun.cn/v2/iat"
     cost_per_second: 0.002
+  vosk:
+    enabled: true
+    model_path: "model/vosk-model-small-cn-0.22"
+    sample_rate: 16000
+    cost_per_second: 0
 
 log:
   level: "info"

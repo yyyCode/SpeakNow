@@ -1,0 +1,14 @@
+SpeakNow
+Copyright (c) 2026 SpeakNow Contributors
+
+This product includes software developed by third parties:
+
+- Vosk API / libvosk (https://github.com/alphacep/vosk-api)
+  Licensed under the Apache License, Version 2.0.
+  See: https://www.apache.org/licenses/LICENSE-2.0
+
+- Vosk speech models (https://alphacephei.com/vosk/models)
+  Distributed under their respective model licenses.
+
+- 讯飞开放平台 WebAPI (optional, when using xunfei provider)
+  Subject to iFlytek/Xunfei platform terms of service.
