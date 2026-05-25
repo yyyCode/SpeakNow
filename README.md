@@ -85,58 +85,110 @@ Web 演示页与 API 均支持 `provider` 参数（见下方 API 文档）。
 
 ## 快速开始
 
-先选一种用法（Windows 本地 Vosk 为主；Linux 见下文 [Linux 部署](#linux-部署systemd)）。
+Windows 本地 Vosk 为主；Linux 见 [Linux 部署](#linux-部署systemd)。
 
-| 你想… | 步骤 |
-|--------|------|
-| **只跑程序，不装 Go** | [方式一：直接运行 exe](#方式一直接运行-exe) |
-| **`git clone` 后自己打 exe** | [方式二：拉取源码并构建 exe](#方式二拉取源码并构建-exewindows) |
-| **改代码、调试服务** | [方式三：源码开发运行](#方式三源码开发运行) |
+### 怎么选？
+
+| 方式 | 适合谁 | 是否需要 Go |
+|------|--------|-------------|
+| [方式一](#方式一直接运行-exe) | 只拿到别人发的 / Releases 里的 `speaknow.exe` | 否 |
+| **[方式二](#方式二拉取源码并构建-exewindows)**（**推荐**） | **`git clone` 拉下本仓库的用户** | 是 |
+| [方式三](#方式三源码开发运行) | 改 Go 代码、联调 API | 是 |
+
+> **建议**：只要你已经 `git clone` 了本仓库，**优先走 [方式二](#方式二拉取源码并构建-exewindows)**，在本机打出与当前源码一致的 `speaknow.exe`，比单独下载的旧版 Release 更可靠。  
+> **若方式一的 exe 打不开、闪退、端口无响应、识别一直失败**，不要反复换下载链接，**请直接按 [方式二](#方式二拉取源码并构建-exewindows) 从源码构建**；构建过程里的报错也更容易排查。
 
 ### 环境要求
 
 | 场景 | 要求 |
 |------|------|
-| **仅运行 exe** | Windows，无需 Go（[Release](docs/RELEASE.md) 下载或本地构建产物） |
-| **构建 exe / 开发** | Go 1.23+、**CGO**、Windows 需 [MinGW-w64](https://www.mingw-w64.org/) |
+| **仅运行 exe（方式一）** | Windows 10/11，无需安装 Go |
+| **构建 exe（方式二）** | Go **1.23+**、**CGO**、**MinGW-w64**（`gcc` 在 PATH 中）、PowerShell |
+| **开发运行（方式三）** | 同方式二 |
 | **可选** | Redis（未连接时自动降级无缓存） |
-| **Web 录音** | 浏览器麦克风权限 |
+| **Web 录音** | 浏览器允许麦克风；建议 Chrome / Edge |
 
-默认监听 **`0.0.0.0:8080`**，演示页：**http://127.0.0.1:8080/web/**（或 `localhost`）。
+服务默认监听 **`0.0.0.0:8080`**。启动成功后控制台会出现类似 `SpeakNow server starting`、`addr` 等日志。演示页：
+
+- **http://127.0.0.1:8080/web/**
+- 或 **http://localhost:8080/web/**
+
+根路径 `/` 会自动跳转到 `/web/`。
 
 ---
 
 ### 方式一：直接运行 exe
 
-适合：从 [GitHub Releases](docs/RELEASE.md) 下载，或已在项目根目录生成过 `speaknow.exe`。
+适合：**没有**克隆仓库、只有单个 `speaknow.exe`（例如 [GitHub Releases](docs/RELEASE.md) 附件）。
 
-1. 将 **`speaknow.exe`** 放到任意目录（单文件即可，无需同目录 DLL）。
-2. **启动服务**（任选其一）：
-   - 双击 `speaknow.exe`
-   - 或在 PowerShell / CMD 中：
+#### 1. 放置与启动
+
+1. 将 **`speaknow.exe`** 放到任意目录（**不需要**同目录再放 DLL 或模型文件夹）。
+2. 启动（任选其一）：
+   - **双击** `speaknow.exe`（会弹出黑色控制台窗口，不要关）
+   - 或在 PowerShell 中（便于看到报错）：
 
 ```powershell
-cd 到 speaknow.exe 所在目录
+cd D:\path\to\exe所在目录
 .\speaknow.exe
 ```
 
-3. 浏览器打开：**http://127.0.0.1:8080/web/**
-4. **首次运行**：exe 同目录会出现 **`.speaknow-data`**（解压内嵌的 Vosk 运行时与语音模型），体积较大属正常，请勿删除正在使用的数据目录。
-5. **自定义配置**（可选）：
+3. 等控制台出现服务已启动的日志（首次可能要 **几十秒～数分钟** 解压内嵌资源）。
+4. 浏览器打开：**http://127.0.0.1:8080/web/**
+
+#### 2. 首次运行会发生什么
+
+| 现象 | 说明 |
+|------|------|
+| 同目录出现 **`.speaknow-data`** | 正常。launcher 把内嵌的 `speaknow-core.exe`、Vosk DLL、语音模型解压到这里 |
+| 目录体积很大（数百 MB） | 正常，内含中文 Vosk 模型 |
+| Windows 防火墙提示 | 选择允许专用网络，否则本机浏览器可能连不上 8080 |
+
+**不要**在程序正在运行时删除 `.speaknow-data`。若怀疑解压损坏，先 `taskkill /IM speaknow.exe /F`，再删掉整个 `.speaknow-data` 后重新运行 exe 让它重新解压。
+
+#### 3. 可选：指定配置文件
+
+默认使用 exe **内嵌**配置（仅 Vosk、`primary: vosk`、监听 `0.0.0.0:8080`）。若要改用讯飞等：
 
 ```powershell
 .\speaknow.exe -config D:\path\to\config.yaml
 ```
 
-未传 `-config` 时使用 exe 内嵌默认配置（仅 Vosk 离线、`primary: vosk`）。
+可参考 `configs/config.example.yaml` 自行编写。
 
-**停止服务**：关闭控制台窗口，或 `taskkill /IM speaknow.exe /F`（见 [关闭 / 重启服务](#关闭--重启服务)）。
+#### 4. 停止服务
+
+- 关闭 exe 的控制台窗口，或
+- `taskkill /IM speaknow.exe /F`（见 [关闭 / 重启服务](#关闭--重启服务)）
+
+#### 5. 方式一 exe 不行？→ 请用方式二
+
+下列情况**不要继续纠结下载的 exe**，请改做 **[方式二：拉取源码并构建 exe](#方式二拉取源码并构建-exewindows)**（你已有仓库时，直接在项目根执行 `.\scripts\build-standalone.ps1` 即可）：
+
+- 双击后**窗口一闪就关**、没有任何日志
+- 控制台有报错（缺 DLL、无法加载模型、`prepare assets` 失败等）
+- 浏览器访问 8080 **连接被拒绝**（确认防火墙、且 8080 未被占用：`netstat -ano | findstr :8080`）
+- 页面能开但 **Vosk 识别无结果 / 一直报错**（多半是 Release 与当前代码或模型不一致）
+
+方式二会在你本机用**当前源码 + 当前 `model/`** 重新打包，成功率最高。若方式二构建也失败，把 PowerShell **完整报错**对照下文 [常见问题](#常见问题) 处理。
 
 ---
 
-### 方式二：拉取源码并构建 exe（Windows）
+### 方式二：拉取源码并构建 exe（Windows）【推荐】
 
-适合：克隆仓库后在本机生成根目录 **`speaknow.exe`**（内嵌网页 + 中文模型 + Vosk DLL）。
+适合：已 `git clone` 本仓库，或 [方式一下载的 exe 无法使用](#5-方式一-exe-不行请用方式二) 时。  
+产物：项目根目录 **`speaknow.exe`**（内嵌 **网页 + 中文模型 + Vosk DLL + 默认配置**），分发时只拷贝这一个文件即可。
+
+#### 0. 构建前：安装工具链（仅首次）
+
+1. **Go 1.23+**  
+   - 安装后执行 `go version` 确认。
+2. **MinGW-w64（提供 `gcc`）**  
+   - 安装后执行 `gcc --version` 确认在 PATH 中。  
+   - 常见安装：MSYS2 里安装 `mingw-w64-x86_64-gcc`，或将 MinGW 的 `bin` 加入系统 PATH。
+3. **Git**（用于 `git clone`）
+
+构建全程在 **PowerShell**、**项目根目录**进行。
 
 #### 1. 克隆仓库
 
@@ -145,48 +197,79 @@ git clone https://github.com/yyyCode/SpeakNow.git
 cd SpeakNow
 ```
 
-#### 2. 准备语音模型（构建前必查）
+若你已经在仓库目录，跳过此步。
 
-构建脚本会把模型打进 exe，需存在目录：
+#### 2. 准备语音模型（必做，否则构建会失败）
+
+`build-standalone.ps1` 会把模型打进 exe，必须先有目录：
 
 ```text
 model/vosk-model-small-cn-0.22/
+    conf/model.conf          ← 用于判断模型是否完整
+    ...
 ```
 
-若仓库里没有，从 [Vosk 模型列表](https://alphacephei.com/vosk/models) 下载「中文小模型」并解压到 `model/`。
+- 若 `git clone` 后仓库里**已有** `model/`（体积大，视仓库而定），检查上述 `conf/model.conf` 是否存在即可。
+- 若没有：打开 [Vosk 模型列表](https://alphacephei.com/vosk/models)，下载 **Chinese small**（`vosk-model-small-cn-0.22`），解压到 `model/`，保证路径与上表一致。
 
-#### 3. 一键构建（推荐）
+#### 3. 一键构建
 
-在**项目根目录**执行（会自动跑 `setup-vosk.ps1`、`prepare-bundle.ps1`，再编译）：
+在**项目根目录**执行（内部顺序：`setup-vosk.ps1` → `prepare-bundle.ps1` → 编译 `cmd/server` → 编译 `cmd/launcher`）：
 
 ```powershell
 .\scripts\build-standalone.ps1
 ```
 
-成功后根目录生成 **`speaknow.exe`**（约 120MB+）。**不要**把 exe 提交 Git，见 [docs/RELEASE.md](docs/RELEASE.md)。
+**脚本会做什么（了解即可，一般不用手跑子脚本）：**
 
-| 脚本（一般无需单独执行） | 作用 |
-|--------------------------|------|
-| `scripts/setup-vosk.ps1` | 准备 `third_party/vosk` 与内嵌 DLL（`build-standalone` 已调用） |
-| `scripts/prepare-bundle.ps1` | 将 `web/`、`model/` 复制到 `internal/assets`（`build-standalone` 已调用） |
-| `scripts/build-standalone.ps1` | **推荐**：完整单文件 exe |
-| `scripts/build-windows.ps1` | 备选：内嵌 DLL，**不**内嵌模型，需保留 `model/vosk-model-small-cn-0.22/` |
+| 步骤 | 脚本 / 动作 | 说明 |
+|------|-------------|------|
+| 1 | `setup-vosk.ps1` | 准备 `third_party/vosk/windows-amd64`；缺库时从 `third_party/vosk-win64.zip` 或 [官方 zip](https://github.com/alphacep/vosk-api/releases/download/v0.3.45/vosk-win64-0.3.45.zip) 下载 |
+| 2 | `prepare-bundle.ps1` | 复制 `web/`、`model/vosk-model-small-cn-0.22` → `internal/assets`，并写入内嵌默认 `default.yaml` |
+| 3 | `go build ./cmd/server` | 生成 `cmd/launcher/payload/speaknow-core.exe`（CGO，需 `gcc`） |
+| 4 | 复制 `*.dll` 到 payload | Vosk 运行时 |
+| 5 | `go build ./cmd/launcher` | 生成根目录 **`speaknow.exe`** |
 
-Vosk 库缺失时，`setup-vosk.ps1` 会优先用 `third_party/vosk-win64.zip`，否则从 [官方 zip](https://github.com/alphacep/vosk-api/releases/download/v0.3.45/vosk-win64-0.3.45.zip) 下载。
+成功时终端会显示类似：`Done: speaknow.exe (xxx MB)`。
 
-#### 4. 启动 exe
+| 其它脚本 | 何时用 |
+|----------|--------|
+| `scripts/build-standalone.ps1` | **默认用这个**（模型也打进 exe） |
+| `scripts/build-windows.ps1` | 不想把模型打进 exe、愿在运行目录保留 `model/` 时用 |
+| 单独跑 `setup-vosk.ps1` / `prepare-bundle.ps1` | 仅当 `build-standalone` 某步失败、需分步重试时 |
+
+**不要**把生成的 `speaknow.exe` 提交 Git，见 [docs/RELEASE.md](docs/RELEASE.md)。
+
+#### 4. 启动本机构建的 exe
+
+仍在**项目根目录**（或把 `speaknow.exe` 拷到别处后进入该目录）：
 
 ```powershell
 .\speaknow.exe
 ```
 
-浏览器访问：**http://127.0.0.1:8080/web/**（步骤同 [方式一](#方式一直接运行-exe)）。
+1. 保持控制台窗口打开，等待日志中出现服务已监听 `8080`。
+2. 浏览器打开：**http://127.0.0.1:8080/web/**
+3. 首次运行同样会生成 **`.speaknow-data`**（与方式一相同）。
+
+可选：`.\speaknow.exe -config configs\config.yaml`（需自行准备 yaml；内嵌默认已可离线 Vosk）。
+
+#### 5. 方式二构建常见报错
+
+| 报错 / 现象 | 处理 |
+|-------------|------|
+| `missing vosk model at model\...` | 按 [§2 准备语音模型](#2-准备语音模型必做否则构建会失败) 下载并解压模型 |
+| `gcc: command not found` / `cgo` 相关错误 | 安装 MinGW，确认 `gcc --version` 可用后重跑构建脚本 |
+| `go: command not found` | 安装 Go 并重启终端 |
+| `setup-vosk` 下载失败 | 手动下载 [vosk-win64-0.3.45.zip](https://github.com/alphacep/vosk-api/releases/download/v0.3.45/vosk-win64-0.3.45.zip) 放到 `third_party/`，再执行 `.\scripts\setup-vosk.ps1` 后重新 `build-standalone` |
+| 构建成功但运行闪退 | 删除 exe 旁 `.speaknow-data` 后重跑；仍不行则改用 [方式三](#方式三源码开发运行) 看控制台详细日志 |
 
 ---
 
 ### 方式三：源码开发运行
 
-适合：频繁改 Go 代码，不每次重打 120MB exe。
+适合：修改 Go 代码、调试配置或 API；**不必**每次打 120MB 的 exe。  
+若 [方式二](#方式二拉取源码并构建-exewindows) 构建出的 exe 仍异常，也应用本方式启动，**错误信息会直接打在终端**，便于排查。
 
 #### 1. 克隆与配置
 
@@ -215,13 +298,14 @@ providers:
     model_path: "model/vosk-model-small-cn-0.22"
 ```
 
-**仅本地 Vosk** 可将 `asr.primary` 设为 `vosk`（参见 `configs/config.release.yaml` / 单文件内嵌默认配置）。
+**仅本地 Vosk** 可将 `asr.primary` 设为 `vosk`，并关闭讯飞（参见 `configs/config.release.yaml`）。
 
 > `configs/config.yaml` 已 `.gitignore`，勿提交密钥。
 
 #### 2. 准备 Vosk 原生库
 
-若 `third_party/vosk/windows-amd64/bin/libvosk.dll` 不存在，在项目根执行：
+检查是否存在：`third_party\vosk\windows-amd64\bin\libvosk.dll`  
+若没有，在项目根执行：
 
 ```powershell
 .\scripts\setup-vosk.ps1
@@ -229,7 +313,9 @@ providers:
 
 #### 3. 准备语音模型
 
-确保存在：`model/vosk-model-small-cn-0.22/`（下载方式同 [方式二](#2-准备语音模型构建前必查)）。
+确保存在：`model\vosk-model-small-cn-0.22\`（与 [方式二 §2](#2-准备语音模型必做否则构建会失败) 相同）。
+
+开发模式下模型**不会**打进二进制，必须保留在 `model/` 目录。
 
 #### 4. 启动服务
 
@@ -238,7 +324,17 @@ $env:CGO_ENABLED = "1"
 go run ./cmd/server -config configs/config.yaml
 ```
 
-浏览器访问：**http://localhost:8080/web/**
+- 未传 `-config` 时使用内置默认（多用于已 `prepare-bundle` 的嵌入构建）。
+- 浏览器访问：**http://localhost:8080/web/**
+
+#### 5. 与方式二的区别
+
+| 对比项 | 方式二（exe） | 方式三（go run） |
+|--------|----------------|------------------|
+| 启动命令 | `.\speaknow.exe` | `go run ./cmd/server -config ...` |
+| 是否需要每次构建 | 改代码后需重新 `build-standalone` | 保存代码后重新 `go run` 即可 |
+| 网页 / 模型位置 | 内嵌在 exe，解压到 `.speaknow-data` | 直接读 `web/`、`model/` |
+| 配置文件 | 默认内嵌；可用 `-config` | 推荐 `configs/config.yaml` |
 
 ---
 
@@ -252,12 +348,30 @@ go run ./cmd/server -config configs/config.yaml
 
 ---
 
+### 常见问题
+
+| 问题 | 建议 |
+|------|------|
+| **下载的 exe 不能用** | 优先 [方式二](#方式二拉取源码并构建-exewindows) 在本机构建；不要反复换不明来源的 exe |
+| **8080 端口被占用** | `netstat -ano \| findstr :8080` 查 PID 后 `taskkill /PID <pid> /F`，或改 `configs/config.yaml` 里 `server.port`（方式三）；exe 需自备 yaml 并用 `-config` |
+| **页面能开，录音无识别** | Web 页引擎选「Vosk 本地」；语言选 `zh-CN`；检查麦克风权限；方式三看终端是否报 `vosk` / `model` 错误 |
+| **想用讯飞云端** | 方式三 + `configs/config.yaml` 填讯飞密钥；或 exe 使用 `-config` 指向含讯飞的 yaml |
+| **`.speaknow-data` 损坏** | 结束所有 `speaknow.exe` 进程后删除该目录，再重新运行 exe |
+| **构建报 CGO / gcc** | 安装 MinGW-w64，新开 PowerShell 再执行 `.\scripts\build-standalone.ps1` |
+| **只想最快跑起来（已 clone）** | 跳过方式一，直接 [方式二](#方式二拉取源码并构建-exewindows) 全流程 |
+
+---
+
 ## 单文件 exe 说明（Windows 分发）
 
-- **构建**：`.\scripts\build-standalone.ps1` → 根目录 `speaknow.exe`
-- **运行**：双击或 `.\speaknow.exe` → 打开 `http://127.0.0.1:8080/web/`
-- **架构**：外层 `speaknow.exe`（launcher）内嵌 `speaknow-core.exe` + Vosk DLL，首次运行解压到 `.speaknow-data/runtime/`
-- **发布**：exe 约 120MB+，请用 GitHub Releases 分发，见 [docs/RELEASE.md](docs/RELEASE.md)
+| 项目 | 说明 |
+|------|------|
+| **推荐构建** | 已 clone 仓库 → [方式二](#方式二拉取源码并构建-exewindows) `.\scripts\build-standalone.ps1` |
+| **运行** | `.\speaknow.exe` → http://127.0.0.1:8080/web/ |
+| **架构** | 外层 `speaknow.exe`（纯 Go launcher）内嵌 `speaknow-core.exe` + Vosk DLL；首次运行解压到 `.speaknow-data/runtime/` |
+| **体积** | 约 120MB+（含模型）；勿提交 Git |
+| **发布** | 维护者上传 GitHub Releases，见 [docs/RELEASE.md](docs/RELEASE.md) |
+| **exe 异常** | 终端用户下载的 Release 若不可用，应在本机按方式二重打，而非仅重新下载 |
 
 ---
 

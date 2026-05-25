@@ -26,7 +26,7 @@ import (
 )
 
 func main() {
-	configPath := flag.String("config", "", "config file path (empty = use built-in default)")
+	configPath := flag.String("config", "", "config file path (empty = configs/config.yaml if present, else built-in default)")
 	flag.Parse()
 
 	if err := assets.Prepare(); err != nil {

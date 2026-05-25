@@ -20,7 +20,9 @@ cd 到 exe 所在目录
 
 可选自定义配置：`.\speaknow.exe -config D:\path\to\config.yaml`
 
-更完整的三种用法（下载 / 自建 / 开发）见仓库根目录 [README.md](../README.md#快速开始)。
+**若下载的 exe 无法运行**（闪退、8080 连不上、识别失败等），不要反复换链接，请 `git clone` 后按 README **[方式二](../README.md#方式二拉取源码并构建-exewindows)** 在本机执行 `.\scripts\build-standalone.ps1` 重新打包。
+
+更完整的三种用法见 [README.md#快速开始](../README.md#快速开始)。
 
 ---
 

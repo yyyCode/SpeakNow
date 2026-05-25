@@ -2,7 +2,6 @@ server:
   host: "0.0.0.0"
   port: 8080
   mode: "debug"
-  # HTTP 超时（防慢连接）；read/write 为 0 表示不限制，以支持 WebSocket 长连接
   read_header_timeout: 10s
   read_timeout: 0s
   write_timeout: 0s
@@ -41,12 +40,11 @@ providers:
     secret_key: ""
     app_id: ""
     cost_per_second: 0.002
-  # 讯飞 WebSocket 流式/离线识别认证（与 config.yaml 中 providers.xunfei 一致）
   xunfei:
     enabled: true
-    app_id: "your-app-id"
-    api_key: "your-api-key"
-    api_secret: "your-api-secret"
+    app_id: "adbed6c9"
+    api_key: "f59f8e84113306f2eed50bb06ed8f20d"
+    api_secret: "MjQxOTQ5NGJiYWY5MzYxOTUyN2ExZGNj"
     host_url: "wss://iat-api.xfyun.cn/v2/iat"
     cost_per_second: 0.002
   vosk:
