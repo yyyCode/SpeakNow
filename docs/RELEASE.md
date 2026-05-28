@@ -31,8 +31,8 @@ cd 到 exe 所在目录
 ```powershell
 git clone https://github.com/yyyCode/SpeakNow.git
 cd SpeakNow
-# 确保 model/vosk-model-small-cn-0.22/ 存在
-.\scripts\build-standalone.ps1
+# 确保 backend/model/vosk-model-small-cn-0.22/ 存在
+.\backend\scripts\build-standalone.ps1
 ```
 
 生成项目根目录 `speaknow.exe`。本地验证：`.\speaknow.exe` → 打开 http://127.0.0.1:8080/web/
@@ -68,8 +68,8 @@ gh release create v1.0.0 speaknow.exe `
 | 方式 | 操作 |
 |------|------|
 | **只用程序** | Releases 下载 `speaknow.exe` → 双击或 `.\speaknow.exe` → http://127.0.0.1:8080/web/ |
-| **拉源码再构建** | `git clone` → 准备 `model/vosk-model-small-cn-0.22/` → `.\scripts\build-standalone.ps1` → `.\speaknow.exe` |
-| **改代码调试** | `git clone` → 配置 `configs/config.yaml` → `.\scripts\setup-vosk.ps1` → `go run ./cmd/server -config configs/config.yaml` |
+| **拉源码再构建** | `git clone` → 准备 `backend/model/vosk-model-small-cn-0.22/` → `.\backend\scripts\build-standalone.ps1` → `.\speaknow.exe` |
+| **改代码调试** | `git clone` → 配置 `backend/configs/config.yaml` → `.\backend\scripts\setup-vosk.ps1` → `go run -C backend ./cmd/server -config configs/config.yaml` |
 
 ## 若坚持要把大文件放进 Git
 

@@ -5,15 +5,17 @@ speaknow-core.exe
 /libgcc_s_seh-1.dll
 /libstdc++-6.dll
 /libwinpthread-1.dll
-cmd/launcher/payload/*
-!cmd/launcher/payload/.gitkeep
-internal/launcher/
+backend/cmd/launcher/payload/*
+!backend/cmd/launcher/payload/.gitkeep
 /bin/
 /dist/
 *.exe~
 
-# 由 prepare-bundle 从 model/ 生成，体积大，换机后跑脚本即可
-internal/assets/model/
+# 由 prepare-bundle 从 model/web/ 生成，体积大，换机后跑脚本即可
+backend/internal/assets/model/*
+!backend/internal/assets/model/.gitkeep
+backend/internal/assets/web/*
+!backend/internal/assets/web/.gitkeep
 
 # 可选：zip 原件较大时用 scripts/setup-vosk.ps1 下载，不必提交
 # third_party/vosk-win64.zip
@@ -47,5 +49,6 @@ reports/pr/
 vendor/
 
 # 建议提交进 Git 的依赖（换电脑可编译）：
-#   third_party/vosk/、internal/voskruntime/dll/、model/、internal/assets/web/
+#   backend/third_party/vosk/、backend/internal/voskruntime/dll/、backend/model/
+# internal/assets/web 与 internal/assets/model 由 prepare-bundle.ps1 生成，已 gitignore
 # 单文件 exe：见 docs/RELEASE.md，上传到 GitHub Releases

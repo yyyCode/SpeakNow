@@ -1,0 +1,9 @@
+services:
+  speaknow:
+    build:
+      context: .
+      dockerfile: deployments/Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./configs:/app/configs:ro
